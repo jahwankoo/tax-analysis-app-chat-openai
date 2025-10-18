@@ -3,7 +3,7 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from io import StringIO, BytesIO
-import anthropic
+from openai import OpenAI
 
 # 페이지 설정
 st.set_page_config(
@@ -60,8 +60,9 @@ def get_data_summary():
     return summary
 
 def chat_with_ai(user_message, api_key):
+    """OpenAI API를 사용하여 대화"""
     try:
-        client = anthropic.Anthropic(api_key=api_key)
+        client = OpenAI(api_key=api_key)
         data_context = get_data_summary()
         
         system_prompt = f"""당신은 세금 데이터 분석 전문가입니다. 
@@ -75,14 +76,18 @@ def chat_with_ai(user_message, api_key):
 3. 한국어로 친절하게 답변하세요
 4. 데이터 분석 인사이트를 제공하세요"""
 
-        message = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=1024,
-            messages=[{"role": "user", "content": user_message}],
-            system=system_prompt
+        # OpenAI API 호출
+        response = client.chat.completions.create(
+            model="gpt-4o",  # 또는 "gpt-3.5-turbo" (더 저렴)
+            messages=[
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_message}
+            ],
+            max_tokens=1000,
+            temperature=0.7
         )
         
-        return message.content[0].text
+        return response.choices[0].message.content
     except Exception as e:
         return f"❌ 오류 발생: {str(e)}\n\nAPI 키를 확인해주세요."
 
@@ -301,23 +306,27 @@ elif menu == "🤖 AI 챗봇":
     st.info("💡 데이터에 대해 자유롭게 질문하세요! AI가 분석해서 답변해드립니다.")
     
     api_key = st.text_input(
-        "Claude API 키를 입력하세요:",
+        "OpenAI API 키를 입력하세요:",
         type="password",
-        help="https://console.anthropic.com에서 발급받을 수 있습니다."
+        help="https://platform.openai.com/api-keys 에서 발급받을 수 있습니다."
     )
     
     if not api_key:
         st.warning("⚠️ API 키를 입력해야 챗봇을 사용할 수 있습니다.")
         st.markdown("""
         ### 📌 API 키 발급 방법:
-        1. [Anthropic Console](https://console.anthropic.com) 접속
+        1. [OpenAI Platform](https://platform.openai.com/api-keys) 접속
         2. 로그인 또는 회원가입
-        3. API Keys 메뉴에서 새 키 생성
+        3. "Create new secret key" 클릭
         4. 생성된 키를 복사하여 위 입력창에 붙여넣기
         
         ### 💰 요금:
-        - Claude Sonnet: $3 / 1M 토큰 (매우 저렴!)
-        - 일반적인 질문 1개 = 약 0.001~0.01원
+        - **GPT-4o**: $2.50 / 1M 입력 토큰, $10 / 1M 출력 토큰
+        - **GPT-3.5 Turbo**: $0.50 / 1M 입력 토큰, $1.50 / 1M 출력 토큰
+        - 일반적인 질문 1개 = 약 $0.001~0.01 (1~10원)
+        
+        ### 🆓 무료 크레딧:
+        - 신규 가입 시 $5 무료 크레딧 제공 (3개월간 유효)
         """)
     else:
         # 채팅 히스토리 표시
@@ -380,7 +389,7 @@ elif menu == "🤖 AI 챗봇":
 st.markdown("---")
 st.markdown("""
 <div style='text-align: center; color: gray;'>
-    💡 VBA 예제를 Streamlit + AI로 구현한 웹 서비스입니다<br>
+    💡 VBA 예제를 Streamlit + OpenAI로 구현한 웹 서비스입니다<br>
     데이터는 세션에만 저장되며, 새로고침 시 초기화됩니다
 </div>
 """, unsafe_allow_html=True)
